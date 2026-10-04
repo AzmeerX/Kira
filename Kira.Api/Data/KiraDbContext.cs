@@ -11,6 +11,10 @@ public class KiraDbContext : IdentityDbContext<ApplicationUser>
     {
     }
 
+    public DbSet<Comment> Comments => Set<Comment>();
+
+    public DbSet<IssueHistory> IssueHistories => Set<IssueHistory>();
+
     public DbSet<Project> Projects => Set<Project>();
     public DbSet<ProjectMember> ProjectMembers => Set<ProjectMember>();
 
@@ -50,5 +54,29 @@ public class KiraDbContext : IdentityDbContext<ApplicationUser>
             .WithMany()
             .HasForeignKey(i => i.AssignedToId)
             .OnDelete(DeleteBehavior.SetNull);
+
+        builder.Entity<Comment>()
+    .HasOne(c => c.Issue)
+    .WithMany(i => i.Comments)
+    .HasForeignKey(c => c.IssueId)
+    .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Entity<Comment>()
+            .HasOne(c => c.User)
+            .WithMany()
+            .HasForeignKey(c => c.UserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Entity<IssueHistory>()
+            .HasOne(h => h.Issue)
+            .WithMany(i => i.History)
+            .HasForeignKey(h => h.IssueId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Entity<IssueHistory>()
+            .HasOne(h => h.User)
+            .WithMany()
+            .HasForeignKey(h => h.UserId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

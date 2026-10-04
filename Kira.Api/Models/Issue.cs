@@ -45,4 +45,10 @@ public class Issue
     // Assignee
     public string? AssignedToId { get; set; }
     public ApplicationUser? AssignedTo { get; set; }
+
+    public ICollection<Comment> Comments { get; set; }
+    = new List<Comment>();
+
+    public ICollection<IssueHistory> History { get; set; }
+        = new List<IssueHistory>();
 }

@@ -65,4 +65,80 @@ public class IssuesController : ControllerBase
             issue
         );
     }
+
+    [HttpPut("{id:int}")]
+    public async Task<ActionResult> Update(
+    int id,
+    UpdateIssueDto dto)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+
+        var issue = await _issueService.UpdateAsync(
+            id,
+            dto,
+            userId);
+
+        if (issue is null)
+        {
+            return NotFound();
+        }
+
+        return Ok(issue);
+    }
+
+    [HttpPost("{id:int}/comments")]
+    public async Task<ActionResult> AddComment(
+    int id,
+    CreateCommentDto dto)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+
+        var comment = await _issueService.AddCommentAsync(
+            id,
+            userId,
+            dto);
+
+        if (comment is null)
+        {
+            return NotFound();
+        }
+
+        return Ok(comment);
+    }
+
+    [HttpGet("{id:int}/comments")]
+    public async Task<ActionResult> GetComments(int id)
+    {
+        var comments = await _issueService.GetCommentsAsync(id);
+
+        if (comments is null)
+        {
+            return NotFound();
+        }
+
+        return Ok(comments);
+    }
+
+    [HttpGet("{id:int}/history")]
+    public async Task<ActionResult> GetHistory(int id)
+    {
+        var history = await _issueService.GetHistoryAsync(id);
+
+        if (history is null)
+        {
+            return NotFound();
+        }
+
+        return Ok(history);
+    }
 }
