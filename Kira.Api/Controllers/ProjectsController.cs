@@ -1,35 +1,80 @@
-using Kira.Api.Data;
-using Kira.Api.Models;
+using Kira.Api.DTOs;
+using Kira.Api.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace Kira.Api.Controllers;
 
+[Authorize]
 [ApiController]
 [Route("api/[controller]")]
 public class ProjectsController : ControllerBase
 {
-    private readonly KiraDbContext _db;
+    private readonly ProjectService _projectService;
 
-    public ProjectsController(KiraDbContext db)
+    public ProjectsController(ProjectService projectService)
     {
-        _db = db;
+        _projectService = projectService;
     }
 
     [HttpGet]
-    public async Task<ActionResult<List<Project>>> GetProjects()
+    public async Task<ActionResult> GetProjects()
     {
-        var projects = await _db.Projects.ToListAsync();
+        var projects = await _projectService.GetAllAsync();
 
         return Ok(projects);
     }
 
-    [HttpPost]
-    public async Task<ActionResult<Project>> CreateProject(Project project)
+    [HttpGet("{id:int}")]
+    public async Task<ActionResult> GetProject(int id)
     {
-        _db.Projects.Add(project);
-        await _db.SaveChangesAsync();
+        var project = await _projectService.GetByIdAsync(id);
+
+        if (project is null)
+        {
+            return NotFound();
+        }
 
         return Ok(project);
+    }
+
+    [HttpPost]
+    public async Task<ActionResult> CreateProject(CreateProjectDto dto)
+    {
+        var project = await _projectService.CreateAsync(dto);
+
+        return CreatedAtAction(
+            nameof(GetProject),
+            new { id = project.Id },
+            project
+        );
+    }
+
+    [HttpPut("{id:int}")]
+    public async Task<ActionResult> UpdateProject(
+        int id,
+        UpdateProjectDto dto)
+    {
+        var project = await _projectService.UpdateAsync(id, dto);
+
+        if (project is null)
+        {
+            return NotFound();
+        }
+
+        return Ok(project);
+    }
+
+    [HttpDelete("{id:int}")]
+    public async Task<ActionResult> DeleteProject(int id)
+    {
+        var deleted = await _projectService.DeleteAsync(id);
+
+        if (!deleted)
+        {
+            return NotFound();
+        }
+
+        return NoContent();
     }
 }
