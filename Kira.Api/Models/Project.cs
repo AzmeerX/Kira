@@ -9,4 +9,10 @@ public class Project
     public string Description { get; set; } = string.Empty;
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    public ICollection<ProjectMember> Members { get; set; }
+        = new List<ProjectMember>();
+
+    public ICollection<Issue> Issues { get; set; }
+        = new List<Issue>();
 }
