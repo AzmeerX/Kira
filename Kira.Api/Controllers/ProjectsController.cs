@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Kira.Api.DTOs;
 using Kira.Api.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -11,16 +12,23 @@ namespace Kira.Api.Controllers;
 public class ProjectsController : ControllerBase
 {
     private readonly ProjectService _projectService;
+    private readonly ProjectPermissionService _permissionService;
 
-    public ProjectsController(ProjectService projectService)
+    public ProjectsController(
+        ProjectService projectService,
+        ProjectPermissionService permissionService)
     {
         _projectService = projectService;
+        _permissionService = permissionService;
     }
 
     [HttpGet]
     public async Task<ActionResult> GetProjects()
     {
-        var projects = await _projectService.GetAllAsync();
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (userId is null) return Unauthorized();
+
+        var projects = await _projectService.GetAllAsync(userId);
 
         return Ok(projects);
     }
@@ -28,6 +36,10 @@ public class ProjectsController : ControllerBase
     [HttpGet("{id:int}")]
     public async Task<ActionResult> GetProject(int id)
     {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (userId is null) return Unauthorized();
+        if (!await _permissionService.IsMemberAsync(id, userId)) return Forbid();
+
         var project = await _projectService.GetByIdAsync(id);
 
         if (project is null)
@@ -41,7 +53,10 @@ public class ProjectsController : ControllerBase
     [HttpPost]
     public async Task<ActionResult> CreateProject(CreateProjectDto dto)
     {
-        var project = await _projectService.CreateAsync(dto);
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (userId is null) return Unauthorized();
+
+        var project = await _projectService.CreateAsync(dto, userId);
 
         return CreatedAtAction(
             nameof(GetProject),
@@ -55,6 +70,10 @@ public class ProjectsController : ControllerBase
         int id,
         UpdateProjectDto dto)
     {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (userId is null) return Unauthorized();
+        if (!await _permissionService.IsManagerAsync(id, userId)) return Forbid();
+
         var project = await _projectService.UpdateAsync(id, dto);
 
         if (project is null)
@@ -68,11 +87,53 @@ public class ProjectsController : ControllerBase
     [HttpDelete("{id:int}")]
     public async Task<ActionResult> DeleteProject(int id)
     {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (userId is null) return Unauthorized();
+        if (!await _permissionService.IsManagerAsync(id, userId)) return Forbid();
+
         var deleted = await _projectService.DeleteAsync(id);
 
         if (!deleted)
         {
             return NotFound();
+        }
+
+        return NoContent();
+    }
+
+    [HttpPost("{id:int}/members")]
+    public async Task<ActionResult> AddMember(
+    int id,
+    AddProjectMemberDto dto)
+    {
+        var currentUserId =
+            User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (currentUserId is null)
+        {
+            return Unauthorized();
+        }
+
+        var isManager = await _permissionService.IsManagerAsync(
+            id,
+            currentUserId);
+
+        if (!isManager)
+        {
+            return Forbid();
+        }
+
+        var success = await _projectService.AddMemberAsync(
+            id,
+            dto.UserId,
+            dto.Role);
+
+        if (!success)
+        {
+            return BadRequest(new
+            {
+                message = "The project or user was not found, the role is invalid, or the project must retain at least one manager."
+            });
         }
 
         return NoContent();

@@ -7,4 +7,6 @@ public class ProjectMember
 
     public string UserId { get; set; } = string.Empty;
     public ApplicationUser User { get; set; } = null!;
+
+    public string Role { get; set; } = "Developer";
 }

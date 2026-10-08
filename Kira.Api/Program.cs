@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.Json.Serialization;
 using Kira.Api.Data;
 using Kira.Api.Models;
 using Kira.Api.Services;
@@ -9,13 +10,24 @@ using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+    });
+
+builder.Services.ConfigureHttpJsonOptions(options =>
+{
+    options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
+});
 
 builder.Services.AddDbContext<KiraDbContext>(options =>
     options.UseSqlServer(
         builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.AddScoped<IssueService>();
+
+builder.Services.AddScoped<ProjectPermissionService>();
 
 builder.Services
     .AddIdentityCore<ApplicationUser>()

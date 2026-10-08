@@ -14,19 +14,23 @@ public class ProjectService
         _db = db;
     }
 
-    public async Task<List<Project>> GetAllAsync()
+    public async Task<List<Project>> GetAllAsync(string userId)
     {
         return await _db.Projects
+            .AsNoTracking()
+            .Where(p => p.Members.Any(pm => pm.UserId == userId))
             .OrderByDescending(p => p.CreatedAt)
             .ToListAsync();
     }
 
     public async Task<Project?> GetByIdAsync(int id)
     {
-        return await _db.Projects.FindAsync(id);
+        return await _db.Projects
+            .AsNoTracking()
+            .FirstOrDefaultAsync(p => p.Id == id);
     }
 
-    public async Task<Project> CreateAsync(CreateProjectDto dto)
+    public async Task<Project> CreateAsync(CreateProjectDto dto, string creatorId)
     {
         var project = new Project
         {
@@ -35,6 +39,11 @@ public class ProjectService
         };
 
         _db.Projects.Add(project);
+        project.Members.Add(new ProjectMember
+        {
+            UserId = creatorId,
+            Role = "Manager"
+        });
         await _db.SaveChangesAsync();
 
         return project;
@@ -67,6 +76,62 @@ public class ProjectService
         }
 
         _db.Projects.Remove(project);
+        await _db.SaveChangesAsync();
+
+        return true;
+    }
+
+    public async Task<bool> AddMemberAsync(
+    int projectId,
+    string userId,
+    string role)
+    {
+        var projectExists = await _db.Projects
+            .AnyAsync(p => p.Id == projectId);
+
+        var userExists = await _db.Users
+            .AnyAsync(u => u.Id == userId);
+
+        if (!projectExists || !userExists)
+        {
+            return false;
+        }
+
+        if (role != "Manager" && role != "Developer")
+        {
+            return false;
+        }
+
+        var member = await _db.ProjectMembers
+            .FirstOrDefaultAsync(pm =>
+                pm.ProjectId == projectId &&
+                pm.UserId == userId);
+
+        if (member is not null)
+        {
+            if (member.Role == "Manager" && role != "Manager")
+            {
+                var managerCount = await _db.ProjectMembers
+                    .CountAsync(pm => pm.ProjectId == projectId && pm.Role == "Manager");
+
+                if (managerCount <= 1)
+                {
+                    return false;
+                }
+            }
+
+            member.Role = role;
+        }
+        else
+        {
+            _db.ProjectMembers.Add(new ProjectMember
+            {
+                ProjectId = projectId,
+                UserId = userId,
+                Role = role
+            });
+        }
+
         await _db.SaveChangesAsync();
 
         return true;

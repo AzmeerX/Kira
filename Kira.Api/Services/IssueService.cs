@@ -14,20 +14,67 @@ public class IssueService
         _db = db;
     }
 
-    public async Task<List<Issue>> GetByProjectAsync(int projectId)
+    public async Task<PagedResultDto<Issue>> GetByProjectAsync(
+    int projectId,
+    string? search,
+    IssueStatus? status,
+    IssuePriority? priority,
+    int page,
+    int pageSize)
     {
-        return await _db.Issues
+        var query = _db.Issues
+            .AsNoTracking()
             .Where(i => i.ProjectId == projectId)
+            .AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            query = query.Where(i =>
+                i.Title.Contains(search) ||
+                i.Description.Contains(search));
+        }
+
+        if (status.HasValue)
+        {
+            query = query.Where(i => i.Status == status.Value);
+        }
+
+        if (priority.HasValue)
+        {
+            query = query.Where(i => i.Priority == priority.Value);
+        }
+
+        var totalCount = await query.CountAsync();
+
+        var issues = await query
             .OrderByDescending(i => i.CreatedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .ToListAsync();
+
+        return new PagedResultDto<Issue>(
+            page,
+            pageSize,
+            totalCount,
+            (int)Math.Ceiling(totalCount / (double)pageSize),
+            issues);
     }
 
     public async Task<Issue?> GetByIdAsync(int id)
     {
         return await _db.Issues
+            .AsNoTracking()
             .Include(i => i.CreatedBy)
             .Include(i => i.AssignedTo)
             .FirstOrDefaultAsync(i => i.Id == id);
+    }
+
+    public async Task<int?> GetProjectIdAsync(int issueId)
+    {
+        return await _db.Issues
+            .Where(i => i.Id == issueId)
+            .Select(i => (int?)i.ProjectId)
+            .FirstOrDefaultAsync();
     }
 
     public async Task<Issue?> CreateAsync(
@@ -158,12 +205,13 @@ public class IssueService
         }
 
         return await _db.Comments
+            .AsNoTracking()
             .Include(c => c.User)
             .Where(c => c.IssueId == issueId)
             .OrderBy(c => c.CreatedAt)
             .ToListAsync();
     }
-    
+
     public async Task<List<IssueHistory>?> GetHistoryAsync(int issueId)
     {
         var issueExists = await _db.Issues
@@ -175,6 +223,7 @@ public class IssueService
         }
 
         return await _db.IssueHistories
+            .AsNoTracking()
             .Include(h => h.User)
             .Where(h => h.IssueId == issueId)
             .OrderByDescending(h => h.CreatedAt)
