@@ -1,1 +1,106 @@
-<p>dashboard works!</p>
+<div class="workspace">
+  <aside class="sidebar" aria-label="Main navigation">
+    <a class="workspace-brand" routerLink="/dashboard" aria-label="Kira dashboard">
+      <span class="brand-mark" aria-hidden="true">K</span>
+      <span>Kira</span>
+    </a>
+
+    <div class="workspace-label">WORKSPACE</div>
+    <a class="nav-item active" routerLink="/dashboard" aria-current="page">
+      <span class="nav-icon" aria-hidden="true">⌂</span> Overview
+    </a>
+    <a class="nav-item" href="#projects">
+      <span class="nav-icon project-icon" aria-hidden="true"></span> Projects
+    </a>
+
+    <div class="sidebar-bottom">
+      <div class="profile-mark" aria-hidden="true">{{ currentUser()?.displayName?.slice(0, 1)?.toUpperCase() || 'K' }}</div>
+      <div class="profile-copy"><strong>{{ currentUser()?.displayName || 'Your workspace' }}</strong><span>{{ currentUser()?.email || 'Project member' }}</span></div>
+      <button class="logout-button" type="button" (click)="logout()" aria-label="Sign out">↗</button>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <header class="topbar">
+      <div class="breadcrumb"><span>Workspace</span><span aria-hidden="true">/</span><strong>Overview</strong></div>
+      <span class="today-label">A little more focus, a little less noise.</span>
+    </header>
+
+    <section class="page-content" aria-labelledby="page-title">
+      <div class="welcome-row">
+        <div>
+          <p class="eyebrow">YOUR WORKSPACE</p>
+          <h1 id="page-title">Good work starts here.</h1>
+          <p class="page-subtitle">A simple view of the projects your team is moving forward.</p>
+        </div>
+        <div class="date-chip"><span class="date-dot" aria-hidden="true"></span> Workspace overview</div>
+      </div>
+
+      <section class="summary-card" aria-label="Project summary">
+        <div class="summary-icon" aria-hidden="true">▦</div>
+        <div class="summary-copy"><span>Projects you’re part of</span><strong>{{ projects().length }}</strong></div>
+        <span class="summary-caption">Your shared work, in one place</span>
+      </section>
+
+      <section class="projects-section" id="projects" aria-labelledby="projects-title">
+        <div class="section-heading">
+          <div><h2 id="projects-title">Your projects</h2><p>Pick up where your team left off.</p></div>
+          <div class="section-actions">
+            <span class="count-pill">{{ projects().length }} total</span>
+            <button class="new-project-button" type="button" (click)="toggleCreateForm()" [attr.aria-expanded]="showCreateForm()">
+              <span aria-hidden="true">＋</span> New project
+            </button>
+          </div>
+        </div>
+
+        @if (showCreateForm()) {
+          <form class="create-project-form" [formGroup]="projectForm" (ngSubmit)="createProject()">
+            <div class="create-project-heading"><strong>Create a project</strong><button type="button" class="close-form" (click)="showCreateForm.set(false)" aria-label="Close project form">×</button></div>
+            <div class="create-fields">
+              <div class="create-field">
+                <label for="project-name">Project name</label>
+                <input id="project-name" type="text" formControlName="name" maxlength="100" placeholder="e.g. Website refresh" [attr.aria-invalid]="projectForm.controls.name.touched && projectForm.controls.name.invalid" />
+              </div>
+              <div class="create-field">
+                <label for="project-description">Description <span>(optional)</span></label>
+                <input id="project-description" type="text" formControlName="description" maxlength="500" placeholder="What is this project about?" />
+              </div>
+              <button class="new-project-button create-submit" type="submit" [disabled]="isCreating()">{{ isCreating() ? 'Creating…' : 'Create project' }}</button>
+            </div>
+            @if (projectForm.controls.name.touched && projectForm.controls.name.hasError('required')) {
+              <p class="create-error">Add a project name to continue.</p>
+            }
+            @if (createError()) { <p class="create-error" role="alert">{{ createError() }}</p> }
+          </form>
+        }
+
+        @if (isLoading()) {
+          <div class="loading-state" role="status"><span class="loading-spinner" aria-hidden="true"></span>Loading your projects…</div>
+        } @else if (hasError()) {
+          <div class="message-card" role="alert">
+            <div class="message-mark" aria-hidden="true">!</div>
+            <div><strong>We couldn’t load your projects</strong><p>Check that Kira is running, then try again.</p></div>
+            <button class="retry-button" type="button" (click)="loadProjects()">Try again</button>
+          </div>
+        } @else if (projects().length === 0) {
+          <div class="empty-state">
+            <div class="empty-illustration" aria-hidden="true"><span></span><span></span><span></span></div>
+            <h3>Your workspace is ready</h3>
+            <p>You’re not part of a project yet. Create your first project or ask a workspace manager to invite you.</p>
+          </div>
+        } @else {
+          <div class="project-grid">
+            @for (project of projects(); track project.id) {
+              <a class="project-card" [routerLink]="['/projects', project.id]" [attr.aria-label]="'Open project ' + project.name">
+                <div class="project-card-top"><span class="project-mark" aria-hidden="true">{{ project.name.slice(0, 1).toUpperCase() }}</span><span class="project-status">Team project</span></div>
+                <h3>{{ project.name }}</h3>
+                <p>{{ project.description || 'No description has been added yet.' }}</p>
+                <div class="project-card-footer"><span>Project workspace</span><span aria-hidden="true">↗</span></div>
+              </a>
+            }
+          </div>
+        }
+      </section>
+    </section>
+  </main>
+</div>

@@ -1,0 +1,8 @@
+{
+  "chat.tools.terminal.autoApprove": {
+    "/^Set-Location 'C:\\\\Users\\\\user\\\\Desktop\\\\Kira\\\\Kira\\.Web'; node --input-type=module -e \"import \\{ FormControl, Validators \\} from '@angular/forms'; const validator=Validators\\.pattern\\('\\(\\?=\\.\\*\\[a-z\\]\\)\\(\\?=\\.\\*\\[A-Z\\]\\)\\(\\?=\\.\\*\\\\\\\\\\\\\\\\d\\)\\(\\?=\\.\\*\\[\\^A-Za-z0-9\\]\\)\\.\\*'\\); for \\(const \\[password, expected\\] of \\[\\['Str0ng!a',true\\],\\['short1!',false\\],\\['STRONG!123',false\\],\\['StrongPass!',false\\],\\['Strong123',false\\]\\]\\) \\{ const control=new FormControl\\(password, validator\\); if \\(control\\.valid !== expected\\) throw new Error\\(password \\+ ': expected '\\+expected\\+', got '\\+control\\.valid\\); console\\.log\\(password\\+': '\\+control\\.valid\\); \\}\"$/": {
+      "approve": true,
+      "matchCommandLine": true
+    }
+  }
+}

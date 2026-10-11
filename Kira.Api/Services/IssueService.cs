@@ -77,6 +77,22 @@ public class IssueService
             .FirstOrDefaultAsync();
     }
 
+    public async Task<bool> DeleteAsync(int id, CancellationToken cancellationToken)
+    {
+        var issue = await _db.Issues
+            .FirstOrDefaultAsync(i => i.Id == id, cancellationToken);
+
+        if (issue is null)
+        {
+            return false;
+        }
+
+        _db.Issues.Remove(issue);
+        await _db.SaveChangesAsync(cancellationToken);
+
+        return true;
+    }
+
     public async Task<Issue?> CreateAsync(
         CreateIssueDto dto,
         string userId)

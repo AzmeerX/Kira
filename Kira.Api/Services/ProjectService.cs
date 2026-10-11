@@ -30,6 +30,20 @@ public class ProjectService
             .FirstOrDefaultAsync(p => p.Id == id);
     }
 
+    public async Task<List<ProjectMemberDto>> GetMembersAsync(int projectId)
+    {
+        return await _db.ProjectMembers
+            .AsNoTracking()
+            .Where(member => member.ProjectId == projectId)
+            .OrderBy(member => member.User.DisplayName)
+            .Select(member => new ProjectMemberDto(
+                member.UserId,
+                member.User.DisplayName,
+                member.User.Email,
+                member.Role))
+            .ToListAsync();
+    }
+
     public async Task<Project> CreateAsync(CreateProjectDto dto, string creatorId)
     {
         var project = new Project
@@ -133,6 +147,40 @@ public class ProjectService
         }
 
         await _db.SaveChangesAsync();
+
+        return true;
+    }
+
+    public async Task<bool> RemoveMemberAsync(
+        int projectId,
+        string userId,
+        CancellationToken cancellationToken)
+    {
+        var member = await _db.ProjectMembers
+            .FirstOrDefaultAsync(
+                pm => pm.ProjectId == projectId && pm.UserId == userId,
+                cancellationToken);
+
+        if (member is null)
+        {
+            return false;
+        }
+
+        if (member.Role == "Manager")
+        {
+            var managerCount = await _db.ProjectMembers
+                .CountAsync(
+                    pm => pm.ProjectId == projectId && pm.Role == "Manager",
+                    cancellationToken);
+
+            if (managerCount <= 1)
+            {
+                return false;
+            }
+        }
+
+        _db.ProjectMembers.Remove(member);
+        await _db.SaveChangesAsync(cancellationToken);
 
         return true;
     }

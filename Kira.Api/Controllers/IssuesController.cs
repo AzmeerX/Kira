@@ -165,6 +165,22 @@ public class IssuesController : ControllerBase
         return Ok(issue);
     }
 
+    [HttpDelete("{id:int}")]
+    public async Task<ActionResult> Delete(int id, CancellationToken cancellationToken)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+
+        if (!await _permissionService.IsMemberOfIssueAsync(id, userId)) return NotFound();
+
+        var deleted = await _issueService.DeleteAsync(id, cancellationToken);
+        return deleted ? NoContent() : NotFound();
+    }
+
     [HttpPost("{id:int}/comments")]
     public async Task<ActionResult> AddComment(
     int id,

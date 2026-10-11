@@ -10,6 +10,17 @@ using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("KiraFrontend", policy =>
+    {
+        policy
+            .WithOrigins("http://localhost:4200")
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+});
+
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
@@ -63,6 +74,10 @@ builder.Services.AddScoped<ProjectService>();
 var app = builder.Build();
 
 app.UseHttpsRedirection();
+
+app.UseRouting();
+
+app.UseCors("KiraFrontend");
 
 app.UseAuthentication();
 app.UseAuthorization();

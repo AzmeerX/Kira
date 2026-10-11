@@ -1,1 +1,96 @@
-<p>login works!</p>
+<main class="login-page">
+  <section class="login-intro" aria-labelledby="intro-title">
+    <a class="brand" href="/" aria-label="Kira home">
+      <span class="brand-mark" aria-hidden="true">K</span>
+      <span>Kira</span>
+    </a>
+
+    <div class="intro-copy">
+      <p class="eyebrow">A clearer way to work</p>
+      <h1 id="intro-title">Make space for the work that matters.</h1>
+      <p class="intro-description">Bring your projects, issues, and team conversations together in one calm workspace.</p>
+      <div class="intro-note"><span class="status-dot" aria-hidden="true"></span> Your team’s work, all in one place</div>
+    </div>
+    <p class="intro-footer">Plan together. Move forward.</p>
+  </section>
+
+  <section class="login-panel" aria-labelledby="login-title">
+    <div class="login-card">
+      <div class="mobile-brand brand">
+        <span class="brand-mark" aria-hidden="true">K</span>
+        <span>Kira</span>
+      </div>
+      <p class="eyebrow">{{ mode() === 'login' ? 'Welcome back' : 'Get started' }}</p>
+      <h2 id="login-title">{{ mode() === 'login' ? 'Sign in to Kira' : 'Create your account' }}</h2>
+      <p class="login-subtitle">{{ mode() === 'login' ? 'Use your account details to open your workspace.' : 'Set up your account and start organizing your team’s work.' }}</p>
+
+      <form [formGroup]="accountForm" (ngSubmit)="submit()" novalidate>
+        @if (mode() === 'register') {
+          <div class="field">
+            <label for="display-name">Your name</label>
+            <input id="display-name" type="text" formControlName="displayName" placeholder="How should we address you?" autocomplete="name" maxlength="100" />
+          </div>
+        }
+        <div class="field">
+          <label for="email">Email address</label>
+          <input
+            id="email"
+            type="email"
+            formControlName="email"
+            placeholder="you@example.com"
+            autocomplete="username"
+            [attr.aria-invalid]="accountForm.controls.email.touched && accountForm.controls.email.invalid"
+            [attr.aria-describedby]="accountForm.controls.email.touched && accountForm.controls.email.invalid ? 'email-error' : null"
+          />
+          @if (accountForm.controls.email.touched && accountForm.controls.email.hasError('required')) {
+            <span class="field-error" id="email-error">Enter your email address.</span>
+          } @else if (accountForm.controls.email.touched && accountForm.controls.email.hasError('email')) {
+            <span class="field-error" id="email-error">Enter a valid email address.</span>
+          }
+        </div>
+
+        <div class="field">
+          <label for="password">Password</label>
+          <input
+            id="password"
+            type="password"
+            formControlName="password"
+            placeholder="Enter your password"
+            autocomplete="current-password"
+            [attr.aria-invalid]="accountForm.controls.password.touched && accountForm.controls.password.invalid"
+            [attr.aria-describedby]="accountForm.controls.password.touched && accountForm.controls.password.invalid ? 'password-error' : null"
+          />
+          @if (accountForm.controls.password.touched && accountForm.controls.password.invalid) {
+            @if (accountForm.controls.password.hasError('required')) {
+              <span class="field-error" id="password-error">Enter your password.</span>
+            } @else if (accountForm.controls.password.hasError('minlength')) {
+              <span class="field-error" id="password-error">Use at least 8 characters.</span>
+            } @else if (accountForm.controls.password.hasError('pattern')) {
+              <span class="field-error" id="password-error">Include uppercase and lowercase letters, a number, and a symbol.</span>
+            }
+          }
+        </div>
+        @if (mode() === 'register') {
+          <p class="password-hint">Use at least 8 characters, including uppercase and lowercase letters, a number, and a symbol.</p>
+        }
+
+        @if (errorMessage()) {
+          <p class="form-error" role="alert">{{ errorMessage() }}</p>
+        }
+        @if (successMessage()) {
+          <p class="form-success" role="status">{{ successMessage() }}</p>
+        }
+
+        <button class="submit-button" type="submit" [disabled]="isSubmitting()">
+          @if (isSubmitting()) { <span class="button-spinner" aria-hidden="true"></span> {{ mode() === 'login' ? 'Signing in…' : 'Creating account…' }} }
+          @else { {{ mode() === 'login' ? 'Sign in' : 'Create account' }} }
+        </button>
+      </form>
+
+      <p class="login-help">
+        {{ mode() === 'login' ? 'New to Kira?' : 'Already have an account?' }}
+        <button class="mode-toggle" type="button" (click)="toggleMode()">{{ mode() === 'login' ? 'Create an account' : 'Sign in' }}</button>
+      </p>
+    </div>
+  </section>
+</main>

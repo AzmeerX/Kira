@@ -1,0 +1,159 @@
+<div class="project-page">
+  <header class="project-topbar">
+    <a class="back-link" routerLink="/dashboard"><span aria-hidden="true">&lt;</span> All projects</a>
+    <div class="topbar-actions">
+      <span class="member-count">{{ members().length }} members</span>
+      <button class="quiet-button" type="button" (click)="logout()">Sign out</button>
+    </div>
+  </header>
+
+  @if (isLoading()) {
+    <div class="page-loading" role="status"><span class="spinner" aria-hidden="true"></span>Loading project...</div>
+  } @else if (pageError()) {
+    <section class="page-message" role="alert"><h1>Project unavailable</h1><p>{{ pageError() }}</p><a routerLink="/dashboard">Return to projects</a></section>
+  } @else if (project(); as currentProject) {
+    <main class="project-content">
+      <div class="project-heading">
+        <div class="project-heading-copy">
+          <p class="eyebrow">PROJECT WORKSPACE</p>
+          <h1>{{ currentProject.name }}</h1>
+          <p>{{ currentProject.description || 'A shared place to plan and track the work.' }}</p>
+        </div>
+        <div class="project-avatar" aria-hidden="true">{{ currentProject.name.slice(0, 1).toUpperCase() }}</div>
+      </div>
+
+      @if (actionError()) { <p class="action-error" role="alert">{{ actionError() }}</p> }
+
+      <nav class="project-tabs" aria-label="Project sections">
+        <button type="button" [class.active]="activeTab() === 'issues'" [attr.aria-current]="activeTab() === 'issues' ? 'page' : null" (click)="activeTab.set('issues')">Issues <span>{{ issues().length }}</span></button>
+        <button type="button" [class.active]="activeTab() === 'members'" [attr.aria-current]="activeTab() === 'members' ? 'page' : null" (click)="activeTab.set('members')">People <span>{{ members().length }}</span></button>
+        @if (isManager()) { <button type="button" [class.active]="activeTab() === 'settings'" [attr.aria-current]="activeTab() === 'settings' ? 'page' : null" (click)="activeTab.set('settings')">Settings</button> }
+      </nav>
+
+      @if (activeTab() === 'issues') {
+        <section class="issues-section" aria-labelledby="issues-heading">
+          <div class="section-title-row">
+            <div><h2 id="issues-heading">Issues</h2><p>{{ issueTotal() }} work items. Keep the next steps visible.</p></div>
+            <button class="primary-button" type="button" (click)="startNewIssue()">New issue</button>
+          </div>
+
+          <div class="filters" role="search">
+            <label class="search-field"><span class="visually-hidden">Search issues</span><span class="search-icon" aria-hidden="true"></span><input #searchBox type="search" placeholder="Search issues..." [value]="issueSearch()" (input)="setSearch(searchBox.value)" /></label>
+            <label><span class="visually-hidden">Filter by status</span><select #statusFilter [value]="issueStatus()" (change)="setStatus(statusFilter.value)"><option value="">All statuses</option>@for (status of statuses; track status) { <option [value]="status">{{ statusLabel(status) }}</option> }</select></label>
+            <label><span class="visually-hidden">Filter by priority</span><select #priorityFilter [value]="issuePriority()" (change)="setPriority(priorityFilter.value)"><option value="">All priorities</option>@for (priority of priorities; track priority) { <option [value]="priority">{{ priority }}</option> }</select></label>
+          </div>
+
+          @if (showIssueForm() || selectedIssue()) {
+            <section class="issue-editor" aria-labelledby="issue-editor-title">
+              <div class="editor-heading">
+                <div><p class="eyebrow">{{ selectedIssue() ? 'ISSUE DETAILS' : 'NEW WORK ITEM' }}</p><h2 id="issue-editor-title">{{ selectedIssue() ? selectedIssue()?.title : 'Create an issue' }}</h2></div>
+                <div class="editor-heading-actions">
+                  @if (selectedIssue()) {
+                    <button class="danger-button" type="button" (click)="deleteIssue()" [disabled]="deletingIssueId() !== null">{{ deletingIssueId() !== null ? 'Deleting…' : 'Delete issue' }}</button>
+                  }
+                  <button class="close-button" type="button" (click)="closeIssue()" aria-label="Close issue details">Close</button>
+                </div>
+              </div>
+
+              <form class="issue-form" [formGroup]="issueForm" (ngSubmit)="saveIssue()">
+                <div class="editor-fields">
+                  <div class="form-field wide"><label for="issue-title">Title</label><input id="issue-title" formControlName="title" maxlength="150" required /></div>
+                  <div class="form-field wide"><label for="issue-description">Description</label><textarea id="issue-description" rows="3" formControlName="description" maxlength="2000"></textarea></div>
+                  @if (selectedIssue()) {
+                    <div class="form-field"><label for="issue-status">Status</label><select id="issue-status" formControlName="status">@for (status of statuses; track status) { <option [value]="status">{{ statusLabel(status) }}</option> }</select></div>
+                  }
+                  <div class="form-field"><label for="issue-priority">Priority</label><select id="issue-priority" formControlName="priority">@for (priority of priorities; track priority) { <option [value]="priority">{{ priority }}</option> }</select></div>
+                  <div class="form-field"><label for="issue-due-date">Due date</label><input id="issue-due-date" type="date" formControlName="dueDate" /></div>
+                  <div class="form-field"><label for="issue-assignee">Assignee</label><select id="issue-assignee" formControlName="assignedToId"><option value="">Unassigned</option>@for (member of members(); track member.userId) { <option [value]="member.userId">{{ member.displayName }}</option> }</select></div>
+                </div>
+                <div class="editor-actions"><button class="primary-button" type="submit" [disabled]="isSaving()">{{ isSaving() ? 'Saving...' : selectedIssue() ? 'Save changes' : 'Create issue' }}</button><button class="quiet-button" type="button" (click)="closeIssue()">Cancel</button></div>
+              </form>
+
+              @if (selectedIssue(); as issue) {
+                <div class="issue-activity">
+                  <div class="activity-tabs" aria-label="Issue activity">
+                    <button type="button" [class.active]="issuePanelTab() === 'comments'" (click)="issuePanelTab.set('comments')">Comments ({{ comments().length }})</button>
+                    <button type="button" [class.active]="issuePanelTab() === 'activity'" (click)="issuePanelTab.set('activity')">History</button>
+                  </div>
+                  @if (issuePanelTab() === 'comments') {
+                    <div class="comment-list">
+                      @for (comment of comments(); track comment.id) {
+                        <article class="comment"><div class="person-avatar" aria-hidden="true">{{ comment.user.displayName.slice(0, 1).toUpperCase() }}</div><div><div class="comment-meta"><strong>{{ comment.user.displayName }}</strong><time>{{ comment.createdAt | date:'medium' }}</time></div><p>{{ comment.content }}</p></div></article>
+                      } @empty { <p class="empty-note">No comments yet. Start the conversation.</p> }
+                    </div>
+                    <form class="comment-form" [formGroup]="commentForm" (ngSubmit)="addComment()">
+                      <label class="visually-hidden" for="comment-content">Write a comment</label>
+                      <textarea id="comment-content" rows="2" maxlength="2000" placeholder="Write a comment..." formControlName="content"></textarea>
+                      <button class="primary-button" type="submit" [disabled]="isAddingComment() || commentForm.invalid">{{ isAddingComment() ? 'Posting...' : 'Comment' }}</button>
+                    </form>
+                  } @else {
+                    <div class="history-list">
+                      @for (entry of history(); track entry.id) {
+                        <article class="history-entry"><span class="history-dot" aria-hidden="true"></span><div><strong>{{ entry.user.displayName }}</strong><span>{{ entry.action }}</span><small>{{ entry.oldValue || 'None' }} <span aria-hidden="true">&gt;</span> {{ entry.newValue || 'None' }}</small><time>{{ entry.createdAt | date:'medium' }}</time></div></article>
+                      } @empty { <p class="empty-note">No changes have been recorded yet.</p> }
+                    </div>
+                  }
+                </div>
+              }
+            </section>
+          }
+
+          <div class="issue-table-wrap">
+            <table class="issue-table">
+              <thead><tr><th scope="col">Issue</th><th scope="col">Status</th><th scope="col">Priority</th><th scope="col">Assignee</th><th scope="col">Due date</th></tr></thead>
+              <tbody>
+                @if (isLoadingIssues()) {
+                  <tr><td colspan="5" class="table-empty">Loading issues...</td></tr>
+                } @else { @for (issue of issues(); track issue.id) {
+                  <tr>
+                    <td><button class="issue-title-button" type="button" (click)="openIssue(issue)"><span class="issue-id">#{{ issue.id }}</span><strong>{{ issue.title }}</strong></button></td>
+                    <td><span class="status-badge" [attr.data-status]="issue.status">{{ statusLabel(issue.status) }}</span></td>
+                    <td><span class="priority-label" [attr.data-priority]="issue.priority">{{ issue.priority }}</span></td>
+                    <td>{{ memberName(issue.assignedToId) }}</td>
+                    <td>{{ issue.dueDate ? (issue.dueDate | date:'mediumDate') : 'No date' }}</td>
+                  </tr>
+                } @empty {
+                  <tr><td colspan="5" class="table-empty">No issues match these filters. Create an issue to get started.</td></tr>
+                } }
+              </tbody>
+            </table>
+          </div>
+          @if (issueTotalPages() > 1) {
+            <nav class="pagination" aria-label="Issue pages">
+              <button type="button" (click)="changePage(issuePage() - 1)" [disabled]="issuePage() === 1">Previous</button>
+              <span>Page {{ issuePage() }} of {{ issueTotalPages() }}</span>
+              <button type="button" (click)="changePage(issuePage() + 1)" [disabled]="issuePage() === issueTotalPages()">Next</button>
+            </nav>
+          }
+        </section>
+      } @else if (activeTab() === 'members') {
+        <section class="members-section" aria-labelledby="members-heading">
+          <div class="section-title-row"><div><h2 id="members-heading">People</h2><p>Everyone working on this project.</p></div></div>
+          @if (isManager()) {
+            <form class="member-invite" [formGroup]="memberForm" (ngSubmit)="addMember()">
+              <div class="form-field"><label for="member-email">Invite by account email</label><input id="member-email" type="email" formControlName="email" placeholder="teammate@example.com" /></div>
+              <div class="form-field"><label for="member-role">Project role</label><select id="member-role" formControlName="role"><option value="Developer">Developer</option><option value="Manager">Manager</option></select></div>
+              <button class="primary-button" type="submit">Add member</button>
+            </form>
+          }
+          <div class="member-list">
+            @for (member of members(); track member.userId) {
+              <article class="member-row"><div class="person-avatar" aria-hidden="true">{{ member.displayName.slice(0, 1).toUpperCase() }}</div><div class="member-identity"><strong>{{ member.displayName }}</strong><span>{{ member.email }}</span></div><span class="role-badge">{{ member.role }}</span>@if (isManager()) { <button class="danger-button member-remove" type="button" (click)="removeMember(member)" [disabled]="removingMemberId() !== null">{{ removingMemberId() === member.userId ? 'Removing…' : 'Remove' }}</button> }</article>
+            }
+          </div>
+          @if (!isManager()) { <p class="members-note">Only project managers can invite new members.</p> }
+        </section>
+      } @else {
+        <section class="settings-section" aria-labelledby="settings-heading">
+          <div class="section-title-row"><div><h2 id="settings-heading">Project settings</h2><p>Update the name and description shown to your team.</p></div></div>
+          <form class="settings-form" [formGroup]="projectForm" (ngSubmit)="saveProject()">
+            <div class="form-field"><label for="settings-name">Project name</label><input id="settings-name" formControlName="name" maxlength="100" /></div>
+            <div class="form-field"><label for="settings-description">Description</label><textarea id="settings-description" rows="4" formControlName="description" maxlength="500"></textarea></div>
+            <button class="primary-button" type="submit">Save project</button>
+          </form>
+          <div class="danger-zone"><div><strong>Delete project</strong><p>This permanently removes the project and its issues.</p></div><button class="danger-button" type="button" (click)="deleteProject()">Delete project</button></div>
+        </section>
+      }
+    </main>
+  }
+</div>
